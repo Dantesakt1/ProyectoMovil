@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.proyectomovil.APIs.LoginAPI.InsertarUsuarioAPI
 import com.proyectomovil.conexionWAN.ValidarConexionWAN
 
 class MainActivity : AppCompatActivity() {
@@ -34,7 +35,33 @@ class MainActivity : AppCompatActivity() {
         val btnLogin: Button = findViewById(R.id.btn_login)
         val txMensajeLogin: TextView = findViewById(R.id.tx_msj_login)
 
+        btnLogin.setOnClickListener {
+            val username = edUser.text.toString()
+            val password = edPassword.text.toString()
 
+            if (username.isEmpty() || password.isEmpty()) {
+                txMensajeLogin.text = "Complete todos los campos"
+                return@setOnClickListener
+            }
+
+            InsertarUsuarioAPI.insertarUsuario(
+                owner = this,
+                context = this,
+                username = username,
+                password = password,
+                onSuccess = { message ->
+                    println("Login correcto")
+                    txMensajeLogin.text = "Login exitoso"
+                    Toast.makeText(this, "Bienvenido $username", Toast.LENGTH_SHORT).show()
+                    // Aquí puedes navegar a otra actividad si quieres
+                },
+                onError = { error ->
+                    println("Login incorrecto: ${error.message}")
+                    txMensajeLogin.text = "Error en login"
+                    Toast.makeText(this, "Credenciales inválidas", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
