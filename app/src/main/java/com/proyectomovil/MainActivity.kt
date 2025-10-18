@@ -1,6 +1,9 @@
 package com.proyectomovil
 
 import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +27,14 @@ class MainActivity : AppCompatActivity() {
                 , "SIN CONEXION"
                 , Toast.LENGTH_SHORT).show()
         }
+
+        //se inicializan las variables
+        val edUser: EditText = findViewById(R.id.ed_user)
+        val edPassword: EditText = findViewById(R.id.ed_password)
+        val btnLogin: Button = findViewById(R.id.btn_login)
+        val txMensajeLogin: TextView = findViewById(R.id.tx_msj_login)
+
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
