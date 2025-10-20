@@ -1,5 +1,6 @@
 package com.proyectomovil
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -53,7 +54,14 @@ class MainActivity : AppCompatActivity() {
                     println("Login correcto")
                     txMensajeLogin.text = "Login exitoso"
                     Toast.makeText(this, "Bienvenido $username", Toast.LENGTH_SHORT).show()
+
                     // Aquí puedes navegar a otra actividad si quieres
+                    val nuevaVentana = Intent(this, Menu::class.java)
+                    var ses_username = username
+
+                    nuevaVentana.putExtra("sesion",ses_username)
+                    nuevaVentana.putExtra("par_contrasena", password)//abrimos el activity
+                    startActivity(nuevaVentana)
                 },
                 onError = { error ->
                     println("Login incorrecto: ${error.message}")
