@@ -15,6 +15,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ProyectoMovil">
         <activity
+            android:name=".PerfilUser"
+            android:exported="false" />
+        <activity
+            android:name=".Apadrinamientos"
+            android:exported="false" />
+        <activity
             android:name=".UserActivity"
             android:exported="false" />
         <activity
