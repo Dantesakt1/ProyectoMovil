@@ -9,6 +9,8 @@
     tools:context=".UserActivity">
 
 
+
+
     <!-- BARRA DE NAVEGACIÓN ABAJO -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/barra_navegacion"
