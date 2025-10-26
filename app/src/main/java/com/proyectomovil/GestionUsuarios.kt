@@ -31,7 +31,7 @@ class GestionUsuarios : AppCompatActivity() {
         val usuarioDesdeOtroActivity = intent.getStringExtra("sesion")
 
         btnVolver.setOnClickListener{
-            val nuevaVentana = Intent(this, Menu::class.java)
+            val nuevaVentana = Intent(this, AdminActivity::class.java)
 
             startActivity(nuevaVentana)
         }
