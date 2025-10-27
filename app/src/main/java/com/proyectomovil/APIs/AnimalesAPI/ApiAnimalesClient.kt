@@ -9,24 +9,17 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 object ApiAnimalesClient {
-
-    // URL base de IUCN Red List API
     private const val BASE_URL = "https://apiv3.iucnredlist.org/api/v3/"
-
-    // TOKEN DE IUCN
     const val API_TOKEN = "FdaNZNFqjk4oWgaHNQ3M7PnWZfonY4YndK8A"
 
-    // Interceptor para logs
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // 🔑 INTERCEPTOR PARA AGREGAR TOKEN A TODAS LAS URLs
     private val tokenInterceptor = Interceptor { chain ->
         val originalRequest = chain.request()
         val originalUrl = originalRequest.url
 
-        // Agregar el token como query parameter
         val newUrl = originalUrl.newBuilder()
             .addQueryParameter("token", API_TOKEN)
             .build()
@@ -38,7 +31,6 @@ object ApiAnimalesClient {
         chain.proceed(newRequest)
     }
 
-    // Cliente HTTP con interceptors
     private val http = OkHttpClient.Builder()
         .addInterceptor(logging)
         .addInterceptor(tokenInterceptor)

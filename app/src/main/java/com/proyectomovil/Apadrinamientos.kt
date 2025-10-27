@@ -16,6 +16,7 @@ import com.proyectomovil.APIs.AnimalesAPI.AnimalesAPI
 import com.proyectomovil.APIs.LoginAPI.UsuariosRepository
 import com.proyectomovil.BDLocal.AnimalApadrinado
 import com.proyectomovil.BDLocal.AnimalesAdapter
+import com.proyectomovil.BDLocal.ApadrinamientosManager
 import kotlinx.coroutines.launch
 
 class Apadrinamientos : AppCompatActivity() {
@@ -33,86 +34,84 @@ class Apadrinamientos : AppCompatActivity() {
         recyclerAnimales = findViewById(R.id.recycler_animales)
         recyclerAnimales.layoutManager = LinearLayoutManager(this)
 
-        // Cargar animales GUARDADOS de SharedPreferences
-        val animalesGuardados = ApadrinamientosManager.obtenerAnimales(this)
+        // Obtener ID del usuario actual
+        val usuarioId = getSharedPreferences("user_prefs", MODE_PRIVATE)
+            .getInt("usuario_id", -1)
 
-        adapter = AnimalesAdapter(animalesGuardados) { animal ->
-            Toast.makeText(this, "Ver detalles de ${animal.nombre}", Toast.LENGTH_SHORT).show()
+        // Si venimos desde sugerencias, procesar el animal a apadrinar
+        if (intent.getBooleanExtra("desde_sugerencias", false)) {
+            val animalId = intent.getIntExtra("animal_id", -1)
+            val animalNombre = intent.getStringExtra("animal_nombre") ?: ""
+
+            if (animalId != -1) {
+                val nuevoAnimal = AnimalApadrinado(
+                    id = animalId,
+                    nombre = animalNombre,
+                    especie = "",  // Se podría obtener de la API
+                    imagen = null,
+                    tieneActualizacion = false,
+                    aporteMensual = 10.0,  // Valor por defecto
+                    estadoConservacion = null,
+                    estaApadrinado = true
+                )
+
+                // Guardar el apadrinamiento
+                ApadrinamientosManager.apadrinarAnimal(this, usuarioId, nuevoAnimal)
+                Toast.makeText(this, "¡Has apadrinado a $animalNombre!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Cargar solo los animales apadrinados por este usuario
+        val animalesApadrinados = ApadrinamientosManager.obtenerApadrinamientosPorUsuario(this, usuarioId)
+            .mapNotNull { animalId ->
+                // Aquí podrías obtener los detalles completos del animal desde la API
+                // Por ahora usamos los datos básicos
+                AnimalApadrinado(
+                    id = animalId,
+                    nombre = "Animal $animalId",
+                    especie = "Especie",
+                    imagen = null,
+                    tieneActualizacion = false,
+                    aporteMensual = 10.0,
+                    estadoConservacion = null,
+                    estaApadrinado = true
+                )
+            }
+
+        fun actualizarEstadisticas(usuarioId: Int) {
+            val apadrinamientos = ApadrinamientosManager.obtenerApadrinamientosPorUsuario(this, usuarioId)
+
+            // Actualizar badges
+            findViewById<TextView>(R.id.badge_animales).text = apadrinamientos.size.toString()
+
+            val aporteMensual = apadrinamientos.size * 10.0  // $10 por animal
+            findViewById<TextView>(R.id.badge_mensual).text = "$${aporteMensual.toInt()}"
+
+            val totalDonado = aporteMensual * 3  // Ejemplo: 3 meses de apadrinamiento
+            findViewById<TextView>(R.id.badge_total).text = "$${totalDonado.toInt()}"
+
+            findViewById<TextView>(R.id.badge_actualizaciones).text = "0"
+
+            // Actualizar texto de logro
+            findViewById<TextView>(R.id.texto_logro).text =
+                "Has alcanzado $${totalDonado.toInt()} en donaciones totales"
+        }
+
+        fun mostrarOpcionesAnimal(animal: AnimalApadrinado) {
+            // Mostrar diálogo con opciones:
+            // - Ver detalles
+            // - Cancelar apadrinamiento
+            // - Ver historial de aportes
+            Toast.makeText(this, "Opciones de ${animal.nombre}", Toast.LENGTH_SHORT).show()
+        }
+
+        adapter = AnimalesAdapter(animalesApadrinados) { animal ->
+            // Mostrar opciones del animal apadrinado
+            mostrarOpcionesAnimal(animal)
         }
         recyclerAnimales.adapter = adapter
 
-        // ACTUALIZAR TARJETAS CON ESTADÍSTICAS
-        // ═══════════════════════════════════════════════════════════
-        fun actualizarEstadisticas() {
-            val stats = ApadrinamientosManager.obtenerEstadisticas(this)
-
-            findViewById<TextView>(R.id.badge_animales).text = stats.totalAnimales.toString()
-            findViewById<TextView>(R.id.badge_total).text = "$${stats.totalDonado.toInt()}"
-            findViewById<TextView>(R.id.badge_mensual).text = "$${stats.aporteMensual.toInt()}"
-            findViewById<TextView>(R.id.badge_actualizaciones).text = stats.actualizaciones.toString()
-
-            findViewById<TextView>(R.id.texto_logro).text =
-                "Has alcanzado $${stats.totalDonado.toInt()} en donaciones totales"
-        }
-
-        // Actualizar estadísticas en las tarjetas
-        actualizarEstadisticas()
-
-        fun cargarEspeciesDisponibles(pagina: Int = 0) {
-            // Obtener especies desde la API de Animales
-            AnimalesAPI.obtenerEspecies(
-                owner = this,
-                context = this,
-                pagina = pagina,
-                onSuccess = { speciesList ->
-                    // Obtener usuarios desde la API de usuarios
-                    lifecycleScope.launch {
-                        val usuariosResult = UsuariosRepository.fetchUsuarios()
-                        usuariosResult.onSuccess { usuarios ->
-                            // Convertir especies a AnimalApadrinado y asignar owner
-                            val animales = speciesList.mapIndexed { index, especie ->
-                                AnimalApadrinado(
-                                    id = especie.taxonId,
-                                    nombre = especie.commonName ?: especie.scientificName,
-                                    especie = especie.scientificName,
-                                    imagen = null,
-                                    tieneActualizacion = false,
-                                    aporteMensual = 0.0,
-                                    owner = if (usuarios.isNotEmpty())
-                                        usuarios[index % usuarios.size].username
-                                    else null
-                                )
-                            }
-
-                            // Guardar en BD local y actualizar UI
-                            ApadrinamientosManager.guardarAnimales(this@Apadrinamientos, animales)
-                            runOnUiThread {
-                                adapter.actualizarAnimales(animales)
-                                actualizarEstadisticas()
-                            }
-                        }.onFailure { e ->
-                            runOnUiThread {
-                                Toast.makeText(
-                                    this@Apadrinamientos,
-                                    "Error cargando usuarios: ${e.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }
-                },
-                onError = { e ->
-                    Toast.makeText(
-                        this,
-                        "Error cargando especies: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-
-        // Cargar especies disponibles de la API
-        cargarEspeciesDisponibles()
+        actualizarEstadisticas(usuarioId)
 
         // Configurar la barra de navegación
         val barraNavegacion = findViewById<BottomNavigationView>(R.id.barra_navegacion)

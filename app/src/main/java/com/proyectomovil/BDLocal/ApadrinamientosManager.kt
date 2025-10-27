@@ -1,116 +1,57 @@
+package com.proyectomovil.BDLocal
+
 import android.content.Context
-import android.content.SharedPreferences
-import com.proyectomovil.BDLocal.AnimalApadrinado
-import com.proyectomovil.BDLocal.Estadisticas
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 object ApadrinamientosManager {
-
     private const val PREFS_NAME = "apadrinamientos_prefs"
-    private const val KEY_ANIMALES = "animales_apadrinados"
-    private const val KEY_TOTAL_DONADO = "total_donado"
+    private const val KEY_APADRINAMIENTOS = "apadrinamientos_por_usuario"
 
-    private val moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
-        .build()
+    // Estructura para guardar apadrinamientos por usuario
+    private data class ApadrinamientoUsuario(
+        val usuarioId: Int,
+        val animalId: Int,
+        val fechaApadrinamiento: Long = System.currentTimeMillis()
+    )
 
-    private fun getPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
+    // Guardar apadrinamiento
+    fun apadrinarAnimal(context: Context, usuarioId: Int, animal: AnimalApadrinado) {
+        val apadrinamientos = obtenerApadrinamientos(context).toMutableList()
 
-    // ═══════════════════════════════════════════════════════════
-    // FUNCIONES PRINCIPALES
-    // ═══════════════════════════════════════════════════════════
-
-    // Guardar lista completa de animales
-    fun guardarAnimales(context: Context, animales: List<AnimalApadrinado>) {
-        val type = Types.newParameterizedType(List::class.java, AnimalApadrinado::class.java)
-        val adapter = moshi.adapter<List<AnimalApadrinado>>(type)
-        val json = adapter.toJson(animales)
-
-        getPrefs(context).edit()
-            .putString(KEY_ANIMALES, json)
-            .apply()
-    }
-
-    // Obtener todos los animales apadrinados
-    fun obtenerAnimales(context: Context): List<AnimalApadrinado> {
-        val json = getPrefs(context).getString(KEY_ANIMALES, "[]") ?: "[]"
-        val type = Types.newParameterizedType(List::class.java, AnimalApadrinado::class.java)
-        val adapter = moshi.adapter<List<AnimalApadrinado>>(type)
-        return adapter.fromJson(json) ?: emptyList()
-    }
-
-    // Apadrinar un nuevo animal
-    fun apadrinarAnimal(context: Context, animal: AnimalApadrinado) {
-        val animales = obtenerAnimales(context).toMutableList()
-
-        // Verificar que no esté ya apadrinado
-        if (animales.none { it.id == animal.id }) {
-            animales.add(animal)
-            guardarAnimales(context, animales)
-
-            // Actualizar total donado
-            val nuevoTotal = obtenerTotalDonado(context) + animal.aporteMensual
-            guardarTotalDonado(context, nuevoTotal)
-        }
-    }
-
-    // Dejar de apadrinar un animal
-    fun dejarDeApadrinar(context: Context, animalId: Int) {
-        val animales = obtenerAnimales(context).toMutableList()
-        val animalEliminado = animales.find { it.id == animalId }
-
-        animales.removeAll { it.id == animalId }
-        guardarAnimales(context, animales)
-
-        // Actualizar total donado
-        if (animalEliminado != null) {
-            val nuevoTotal = obtenerTotalDonado(context) - animalEliminado.aporteMensual
-            guardarTotalDonado(context, nuevoTotal.coerceAtLeast(0.0))
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // FUNCIONES DE ESTADÍSTICAS
-    // ═══════════════════════════════════════════════════════════
-
-    // Guardar total donado
-    fun guardarTotalDonado(context: Context, total: Double) {
-        getPrefs(context).edit()
-            .putFloat(KEY_TOTAL_DONADO, total.toFloat())
-            .apply()
-    }
-
-    // Obtener total donado
-    fun obtenerTotalDonado(context: Context): Double {
-        return getPrefs(context).getFloat(KEY_TOTAL_DONADO, 0f).toDouble()
-    }
-
-    // Calcular todas las estadísticas
-    fun obtenerEstadisticas(context: Context): Estadisticas {
-        val animales = obtenerAnimales(context)
-        return Estadisticas(
-            totalAnimales = animales.size,
-            aporteMensual = animales.sumOf { it.aporteMensual },
-            totalDonado = obtenerTotalDonado(context),
-            actualizaciones = animales.count { it.tieneActualizacion }
+        // Crear nuevo apadrinamiento
+        val nuevoApadrinamiento = ApadrinamientoUsuario(
+            usuarioId = usuarioId,
+            animalId = animal.id
         )
+
+        apadrinamientos.add(nuevoApadrinamiento)
+        guardarApadrinamientos(context, apadrinamientos)
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // FUNCIONES AUXILIARES
-    // ═══════════════════════════════════════════════════════════
-
-    // Verificar si un animal ya está apadrinado
-    fun estaApadrinado(context: Context, animalId: Int): Boolean {
-        return obtenerAnimales(context).any { it.id == animalId }
+    // Obtener apadrinamientos de un usuario
+    fun obtenerApadrinamientosPorUsuario(context: Context, usuarioId: Int): List<Int> {
+        return obtenerApadrinamientos(context)
+            .filter { it.usuarioId == usuarioId }
+            .map { it.animalId }
     }
 
-    // Limpiar todos los datos (para testing)
-    fun limpiarTodo(context: Context) {
-        getPrefs(context).edit().clear().apply()
+    // Verificar si un animal está apadrinado por un usuario
+    fun estaApadrinadoPorUsuario(context: Context, usuarioId: Int, animalId: Int): Boolean {
+        return obtenerApadrinamientos(context)
+            .any { it.usuarioId == usuarioId && it.animalId == animalId }
+    }
+
+    private fun obtenerApadrinamientos(context: Context): List<ApadrinamientoUsuario> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = prefs.getString(KEY_APADRINAMIENTOS, "[]")
+        val type = object : TypeToken<List<ApadrinamientoUsuario>>() {}.type
+        return Gson().fromJson(json, type)
+    }
+
+    private fun guardarApadrinamientos(context: Context, apadrinamientos: List<ApadrinamientoUsuario>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = Gson().toJson(apadrinamientos)
+        prefs.edit().putString(KEY_APADRINAMIENTOS, json).apply()
     }
 }

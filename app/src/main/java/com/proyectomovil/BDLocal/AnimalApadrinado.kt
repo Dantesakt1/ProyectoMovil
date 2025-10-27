@@ -7,5 +7,7 @@ data class AnimalApadrinado(
     val imagen: String?,
     val tieneActualizacion: Boolean = false,
     val aporteMensual: Double = 0.0,
-    val owner: String? = null
+    val estadoConservacion: String? = null,
+    val estaApadrinado: Boolean = false,
+    val usuarioId: Int? = null  // ID del usuario que apadrina
 )

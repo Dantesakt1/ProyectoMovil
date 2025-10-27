@@ -68,4 +68,7 @@ dependencies {
 
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+
+    // LiveData KTX
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.2")
 }

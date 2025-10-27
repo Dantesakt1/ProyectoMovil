@@ -1,37 +1,27 @@
 package com.proyectomovil.APIs.AnimalesAPI
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import androidx.lifecycle.liveData
+import com.proyectomovil.BDLocal.AnimalApadrinado
+import retrofit2.HttpException
+import java.io.IOException
 
 object AnimalesRepository {
-
-    // Obtener especies (página 0 = primeras)
-    suspend fun fetchSpecies(page: Int = 0): Result<SpeciesResponse> =
-        withContext(Dispatchers.IO) {
-            try {
-                Result.success(ApiAnimalesClient.service.getSpeciesByPage(page))
-            } catch (e: Exception) {
-                Result.failure(e)
+    fun getEspecies(pagina: Int = 0) = liveData {
+        try {
+            val response = ApiAnimalesClient.service.getEspecies(page = pagina)
+            if (response.isSuccessful) {
+                val especies = response.body()?.result?.map { it.toAnimalApadrinado() } ?: emptyList()
+                emit(Result.success(especies))
+            } else {
+                emit(Result.failure(Exception("Error: ${response.code()}")))
             }
-        }
-
-    // Buscar especie por nombre
-    suspend fun fetchSpeciesByName(name: String): Result<SpeciesDetailResponse> =
-        withContext(Dispatchers.IO) {
-            try {
-                Result.success(ApiAnimalesClient.service.getSpeciesByName(name))
-            } catch (e: Exception) {
-                Result.failure(e)
+        } catch (e: Exception) {
+            val error = when (e) {
+                is HttpException -> Exception("Error de red: ${e.code()}")
+                is IOException -> Exception("Error de conexión. Verifica tu internet.")
+                else -> Exception("Error desconocido: ${e.message}")
             }
+            emit(Result.failure(error))
         }
-
-    // Obtener especies por país
-    suspend fun fetchSpeciesByCountry(countryCode: String): Result<CountrySpeciesResponse> =
-        withContext(Dispatchers.IO) {
-            try {
-                Result.success(ApiAnimalesClient.service.getSpeciesByCountry(countryCode))
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
+    }
 }

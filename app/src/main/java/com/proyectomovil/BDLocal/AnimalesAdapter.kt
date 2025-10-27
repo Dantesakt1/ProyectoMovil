@@ -13,12 +13,12 @@ class AnimalesAdapter(
     private val onClick: (AnimalApadrinado) -> Unit
 ) : RecyclerView.Adapter<AnimalesAdapter.AnimalViewHolder>() {
 
-    class AnimalViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    inner class AnimalViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val imgAnimal: ImageView = view.findViewById(R.id.img_animal)
+        val btnOpciones: ImageView = view.findViewById(R.id.btn_opciones) // Added this
         val txtNombre: TextView = view.findViewById(R.id.txt_nombre)
         val txtEspecie: TextView = view.findViewById(R.id.txt_especie)
         val badgeNuevo: TextView = view.findViewById(R.id.badge_nuevo)
-        val btnOpciones: ImageView = view.findViewById(R.id.btn_opciones)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AnimalViewHolder {
@@ -32,23 +32,20 @@ class AnimalesAdapter(
 
         holder.txtNombre.text = animal.nombre
         holder.txtEspecie.text = animal.especie
-
-        // Mostrar badge si tiene actualización
         holder.badgeNuevo.visibility = if (animal.tieneActualizacion) View.VISIBLE else View.GONE
 
-        // TODO: Cargar imagen con Glide o Picasso
-        // Glide.with(holder.itemView).load(animal.imagen).into(holder.imgAnimal)
-
-        holder.itemView.setOnClickListener {
+        // Handle options button click
+        holder.btnOpciones.setOnClickListener {
             onClick(animal)
         }
 
-        holder.btnOpciones.setOnClickListener {
-            // Mostrar opciones (compartir, detalles, etc.)
-        }
+        // TODO: Load animal image using Glide or similar
+        // Glide.with(holder.imgAnimal.context)
+        //     .load(animal.imagen)
+        //     .into(holder.imgAnimal)
     }
 
-    override fun getItemCount() = animales.size
+    override fun getItemCount(): Int = animales.size
 
     fun actualizarAnimales(nuevosAnimales: List<AnimalApadrinado>) {
         animales = nuevosAnimales
